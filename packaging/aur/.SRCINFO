@@ -1,6 +1,6 @@
 pkgbase = omarchy-stickynote
 	pkgdesc = Native GTK4 sticky-note checklist for Omarchy and Hyprland
-	pkgver = 1.0.0
+	pkgver = 1.0.1
 	pkgrel = 1
 	url = https://github.com/Christopher-Moreira/omarchy-stickynote
 	arch = any
@@ -12,7 +12,7 @@ pkgbase = omarchy-stickynote
 	optdepends = uwsm: launch the app in a managed Wayland session
 	optdepends = waybar: show the pending-note counter
 	optdepends = walker: find Sticky Notes through the application launcher
-	source = omarchy-stickynote-1.0.0.tar.gz::https://github.com/Christopher-Moreira/omarchy-stickynote/releases/download/v1.0.0/omarchy-stickynote-1.0.0.tar.gz
-	sha256sums = 4dced8cef0ecedffa5831885558a35a16e95e1138244ddd76e6ecc1de64ef7ea
+	source = omarchy-stickynote-1.0.1.tar.gz::https://github.com/Christopher-Moreira/omarchy-stickynote/releases/download/v1.0.1/omarchy-stickynote-1.0.1.tar.gz
+	sha256sums = 159fe5de22106703cf383c274257d4f9750bcfbb78a0192fb2f23c19890b22f1
 
 pkgname = omarchy-stickynote

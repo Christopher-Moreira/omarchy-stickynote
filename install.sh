@@ -1,7 +1,6 @@
 #!/bin/bash
-# Instala o omarchy-stickynote no usuário para desenvolvimento local.
-# As edições do Hyprland (keybind, autostart, window rules) estão no README
-# e devem ser adicionadas aos seus arquivos em ~/.config/hypr/.
+# Install omarchy-stickynote for the current user during local development.
+# Optional Hyprland keybind, autostart and window rules are documented in README.md.
 set -euo pipefail
 
 REPO="$(dirname "$(readlink -f "$0")")"
@@ -13,7 +12,7 @@ mkdir -p "$BIN_DIR"
 for f in omarchy-stickynote omarchy-stickynote-toggle omarchy-stickynote-waybar; do
   chmod +x "$REPO/$f"
   ln -sf "$REPO/$f" "$BIN_DIR/$f"
-  echo "linkado: $BIN_DIR/$f -> $REPO/$f"
+  echo "linked: $BIN_DIR/$f -> $REPO/$f"
 done
 
 mkdir -p "$APP_DIR" "$ICON_DIR"
@@ -27,5 +26,5 @@ if command -v update-desktop-database >/dev/null 2>&1; then
 fi
 
 echo
-echo "Pronto. O app já pode ser buscado como 'Sticky Notes' no launcher."
-echo "Veja o README.md para os snippets opcionais do Hyprland e Waybar."
+echo "Done. The app is now searchable as 'Sticky Notes' in the launcher."
+echo "See README.md for the optional Hyprland and Waybar snippets."

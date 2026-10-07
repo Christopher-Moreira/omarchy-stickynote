@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.1 - 2026-10-07
+
+- Standardized the application UI, documentation and distributable text in English.
+
 ## 1.0.0 - 2026-10-07
 
 - Native GTK4 sticky-note checklist with atomic local persistence.
@@ -10,4 +14,3 @@
 - Fast checkbox burst animation when completing a task.
 - XDG desktop entry and scalable icon for application launchers.
 - Arch Linux/AUR packaging.
-

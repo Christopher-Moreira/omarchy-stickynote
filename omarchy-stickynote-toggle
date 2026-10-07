@@ -1,6 +1,6 @@
 #!/bin/bash
-# Mostra/esconde o sticky note. Se já roda, manda --toggle pra instância
-# (via instância única do GTK). Se não, inicia já mostrando.
+# Show or hide the sticky note. Toggle the existing GTK single instance when
+# running; otherwise start a visible instance.
 set -euo pipefail
 
 BIN="$(dirname "$(readlink -f "$0")")/omarchy-stickynote"

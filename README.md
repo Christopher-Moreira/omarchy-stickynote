@@ -1,22 +1,24 @@
 # omarchy-stickynote
 
-Um checknoter flutuante e nativo pro Omarchy/Hyprland. Um quadradinho amarelo
-estilo post-it: digite no topo, dê **Enter** e vira um item com checkbox.
-Marcou o checkbox → o item some. Dados salvos localmente na hora.
+A native floating checklist for Omarchy and Hyprland. It looks and behaves like
+a small yellow sticky note: type at the top, press **Enter**, and the text becomes
+a checkbox item. Complete an item and it disappears. Changes are saved locally
+as soon as they happen.
 
-- **Nativo**: GTK4 (Python + PyGObject), sem Electron, abre instantâneo.
-- **Flutuante normal**: abre no workspace atual, **não escurece a tela** e não
-  bloqueia o foco, os cliques ou os atalhos dos outros tiles. Nasce fora do tile
-  manager sem mexer no seu `SUPER+G`.
-- **Sobe/desce**: `SUPER + CTRL + S` faz toggle (ou clique no ícone do waybar).
-- **Ícone no tray do waybar**: recolhido junto dos ícones como o Slack, mostra o
-  nº de notas pendentes; clique faz toggle; o app atualiza via SIGRTMIN+11.
-- **Persistência**: `~/.local/share/omarchy-stickynote/notes.json` (escrita atômica).
-- **Esc**: esconde a nota.
-- **Multilinha**: `Shift+Enter` quebra a linha; `Enter` cria a nota.
-- **Feedback visual**: entrada suave e explosão de sparkles no checkbox ao concluir.
+- **Native:** GTK4 with Python and PyGObject—no Electron, with instant startup.
+- **Regular floating window:** opens on the current workspace without dimming the
+  screen, stealing focus from other tiles, or changing your `SUPER+G` behavior.
+- **Show/hide toggle:** `SUPER + CTRL + S`, or click the Waybar icon.
+- **Waybar tray icon:** stays collapsed with icons such as Slack, shows the number
+  of pending notes, toggles the app on click, and refreshes through `SIGRTMIN+11`.
+- **Local persistence:** `~/.local/share/omarchy-stickynote/notes.json`, written
+  atomically.
+- **Escape:** hides the note.
+- **Multiline notes:** `Shift+Enter` inserts a line break; `Enter` creates the note.
+- **Visual feedback:** smooth entry and a quick sparkle burst from the checkbox
+  when completing a task.
 
-## Instalar
+## Installation
 
 ### Arch Linux / Omarchy (AUR)
 
@@ -24,19 +26,20 @@ Marcou o checkbox → o item some. Dados salvos localmente na hora.
 yay -S omarchy-stickynote
 ```
 
-Depois da instalação, pressione `SUPER + SPACE` e procure por **Sticky Notes**.
-O pacote instala a entrada XDG em `/usr/share/applications`, então também
-funciona em outros launchers compatíveis.
+After installation, press `SUPER + SPACE` and search for **Sticky Notes**. The
+package installs an XDG desktop entry in `/usr/share/applications`, so it also
+works with other compatible application launchers.
 
-### Release manual
+### Manual release
 
-Baixe `omarchy-stickynote-1.0.0.tar.gz` na página de releases, extraia e rode:
+Download `omarchy-stickynote-1.0.1.tar.gz` from the releases page, extract it,
+and run:
 
 ```bash
 ./install.sh
 ```
 
-### Desenvolvimento local
+### Local development
 
 ```bash
 git clone https://github.com/Christopher-Moreira/omarchy-stickynote.git
@@ -44,12 +47,14 @@ cd omarchy-stickynote
 ./install.sh
 ```
 
-Isso linka os três executáveis em `~/.local/bin` e instala a entrada `.desktop`
-e o ícone em `~/.local/share`, tornando o app pesquisável imediatamente.
+The installer links the three executables into `~/.local/bin` and installs the
+desktop entry and icon under `~/.local/share`, making the app searchable right
+away.
 
-## Configurar o Hyprland
+## Hyprland setup
 
-**`~/.config/hypr/hyprland.conf`** (no final — window rules pessoais):
+Add the following personal window rules to the end of
+`~/.config/hypr/hyprland.conf`:
 
 ```conf
 windowrule = float on,                        match:class ^com\.omarchy\.stickynote$
@@ -59,25 +64,27 @@ windowrule = rounding 16,                     match:class ^com\.omarchy\.stickyn
 windowrule = opacity 1 1,                     match:class ^com\.omarchy\.stickynote$
 ```
 
-**`~/.config/hypr/bindings.conf`** (`SUPER+CTRL+S` é "Share" por padrão):
+In `~/.config/hypr/bindings.conf`, replace Omarchy's default
+`SUPER + CTRL + S` Share binding:
 
 ```conf
 unbind = SUPER CTRL, S
 bindd = SUPER CTRL, S, Sticky note, exec, omarchy-stickynote-toggle
 ```
 
-**`~/.config/hypr/autostart.conf`** (residente, escondido, no login):
+Start a hidden resident instance at login from
+`~/.config/hypr/autostart.conf`:
 
 ```conf
 exec-once = uwsm-app -- ~/.local/bin/omarchy-stickynote --hidden
 ```
 
-Depois: `hyprctl reload`.
+Apply the changes with `hyprctl reload`.
 
-## Configurar o Waybar
+## Waybar setup
 
-Em `~/.config/waybar/config.jsonc`, adicione o módulo e coloque-o dentro do
-`group/tray-expander`, junto ao tray:
+Add the module below to `~/.config/waybar/config.jsonc`, then place it inside
+`group/tray-expander` next to the tray:
 
 ```jsonc
 "custom/stickynote": {
@@ -96,43 +103,44 @@ Em `~/.config/waybar/config.jsonc`, adicione o módulo e coloque-o dentro do
 }
 ```
 
-CSS opcional em `~/.config/waybar/style.css`:
+Optional CSS for `~/.config/waybar/style.css`:
 
 ```css
 #custom-stickynote { min-width: 12px; margin: 0 7.5px; }
 #custom-stickynote.empty { opacity: 0.55; }
 ```
 
-Depois: `omarchy restart waybar`.
+Restart Waybar with `omarchy restart waybar`.
 
-## Uso
+## Usage
 
-- `SUPER + SPACE`, procure **Sticky Notes** — abre pelo launcher
-- `SUPER + CTRL + S` ou clique no ícone do waybar — sobe/desce
-- Digite + `Enter` — adiciona item
-- `Shift + Enter` — quebra linha sem criar outro item
-- Clique no checkbox (ou no texto) — conclui e remove
-- `Esc` — esconde
+- `SUPER + SPACE`, then search for **Sticky Notes**—open from the launcher.
+- `SUPER + CTRL + S`, or click the Waybar icon—show or hide the note.
+- Type and press `Enter`—add an item.
+- Press `Shift + Enter`—insert a line break without creating another item.
+- Click a checkbox or its text—complete and remove the item.
+- Press `Escape`—hide the note.
 
-## Linha de comando
+## Command line
 
+```text
+omarchy-stickynote            open and show the note
+omarchy-stickynote --hidden   start resident and hidden for autostart
+omarchy-stickynote --toggle   show or hide the running instance
+omarchy-stickynote --show
+omarchy-stickynote --hide
 ```
-omarchy-stickynote            abre (mostra)
-omarchy-stickynote --hidden   residente, escondido (autostart)
-omarchy-stickynote --toggle   mostra/esconde a instância em execução
-omarchy-stickynote --show / --hide
-```
 
-## Desenvolvimento e release
+## Development and releases
 
 ```bash
 make test
-make dist VERSION=1.0.0
+make dist VERSION=1.0.1
 ```
 
-O arquivo `packaging/aur/PKGBUILD` contém a receita do pacote Arch/AUR. Releases
-usam tags `vX.Y.Z` e o tarball determinístico criado por `make dist`.
+`packaging/aur/PKGBUILD` contains the Arch/AUR package recipe. Releases use
+`vX.Y.Z` tags and the deterministic tarball produced by `make dist`.
 
-## Licença
+## License
 
 [MIT](LICENSE) © 2026 Christopher Moreira.

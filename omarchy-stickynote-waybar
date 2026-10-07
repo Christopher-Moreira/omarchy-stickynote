@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Saída JSON pro módulo custom/stickynote do waybar: ícone + nº de notas."""
+"""JSON output for Waybar's custom/stickynote module: icon and note count."""
 import html
 import json
 import os
@@ -23,10 +23,10 @@ if n:
         shown += f"\n… +{n - 12}"
     out = {
         "text": f"{ICON} {n}",
-        "tooltip": f"{n} nota(s) pendente(s)\n{shown}",
+        "tooltip": f"{n} pending note(s)\n{shown}",
         "class": "has-notes",
     }
 else:
-    out = {"text": ICON, "tooltip": "Sem notas pendentes", "class": "empty"}
+    out = {"text": ICON, "tooltip": "No pending notes", "class": "empty"}
 
 print(json.dumps(out))

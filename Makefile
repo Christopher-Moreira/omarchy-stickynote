@@ -1,4 +1,4 @@
-VERSION ?= 1.0.0
+VERSION ?= 1.0.1
 NAME := omarchy-stickynote
 DIST_ROOT := dist/$(NAME)-$(VERSION)
 ARCHIVE := dist/$(NAME)-$(VERSION).tar.gz
@@ -24,4 +24,3 @@ dist: test clean
 
 clean:
 	rm -rf "$(DIST_ROOT)" "$(ARCHIVE)"
-
