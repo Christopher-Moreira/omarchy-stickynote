@@ -1,0 +1,33 @@
+# Maintainer: Christopher Moreira <christophermoreira.dev@gmail.com>
+pkgname=omarchy-stickynote
+pkgver=1.0.0
+pkgrel=1
+pkgdesc='Native GTK4 sticky-note checklist for Omarchy and Hyprland'
+arch=('any')
+url='https://github.com/Christopher-Moreira/omarchy-stickynote'
+license=('MIT')
+depends=('gtk4' 'python' 'python-gobject' 'procps-ng')
+optdepends=(
+  'uwsm: launch the app in a managed Wayland session'
+  'waybar: show the pending-note counter'
+  'walker: find Sticky Notes through the application launcher'
+)
+source=("$pkgname-$pkgver.tar.gz::$url/releases/download/v$pkgver/$pkgname-$pkgver.tar.gz")
+sha256sums=('4dced8cef0ecedffa5831885558a35a16e95e1138244ddd76e6ecc1de64ef7ea')
+
+package() {
+  cd "$srcdir/$pkgname-$pkgver"
+
+  install -Dm755 omarchy-stickynote "$pkgdir/usr/bin/omarchy-stickynote"
+  install -Dm755 omarchy-stickynote-toggle "$pkgdir/usr/bin/omarchy-stickynote-toggle"
+  install -Dm755 omarchy-stickynote-waybar "$pkgdir/usr/bin/omarchy-stickynote-waybar"
+
+  install -Dm644 data/com.omarchy.stickynote.desktop \
+    "$pkgdir/usr/share/applications/com.omarchy.stickynote.desktop"
+  install -Dm644 data/icons/hicolor/scalable/apps/com.omarchy.stickynote.svg \
+    "$pkgdir/usr/share/icons/hicolor/scalable/apps/com.omarchy.stickynote.svg"
+
+  install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
+  install -Dm644 CHANGELOG.md "$pkgdir/usr/share/doc/$pkgname/CHANGELOG.md"
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

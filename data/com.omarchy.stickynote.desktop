@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Sticky Notes
+GenericName=Sticky-note checklist
+Comment=Fast floating checklist for Omarchy and Hyprland
+Exec=omarchy-stickynote --show
+TryExec=omarchy-stickynote
+Icon=com.omarchy.stickynote
+Terminal=false
+Categories=Utility;
+Keywords=notes;sticky;tasks;todo;checklist;omarchy;
+StartupNotify=true
+StartupWMClass=com.omarchy.stickynote
