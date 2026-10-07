@@ -1,0 +1,32 @@
+#!/usr/bin/env python3
+"""Saída JSON pro módulo custom/stickynote do waybar: ícone + nº de notas."""
+import html
+import json
+import os
+
+ICON = "\U000f039a"  # nf-md-note_text (JetBrainsMono Nerd Font)
+
+base = os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share")
+data_file = os.path.join(base, "omarchy-stickynote", "notes.json")
+
+try:
+    with open(data_file, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    notes = [str(x) for x in data if str(x).strip()] if isinstance(data, list) else []
+except (FileNotFoundError, json.JSONDecodeError, OSError, TypeError):
+    notes = []
+
+n = len(notes)
+if n:
+    shown = "\n".join("• " + html.escape(x) for x in notes[:12])
+    if n > 12:
+        shown += f"\n… +{n - 12}"
+    out = {
+        "text": f"{ICON} {n}",
+        "tooltip": f"{n} nota(s) pendente(s)\n{shown}",
+        "class": "has-notes",
+    }
+else:
+    out = {"text": ICON, "tooltip": "Sem notas pendentes", "class": "empty"}
+
+print(json.dumps(out))

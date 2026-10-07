@@ -1,0 +1,439 @@
+#!/usr/bin/env python3
+"""
+omarchy-stickynote — um checknoter flutuante e nativo (GTK4).
+
+Um quadradinho amarelo estilo post-it: digite no topo e dê Enter pra criar
+um item com checkbox. Marcou o checkbox, o item some. Dados persistidos
+localmente em ~/.local/share/omarchy-stickynote/notes.json (escrita atômica).
+
+Instância única. Sobe/desce sem special workspace (não escurece a tela):
+    omarchy-stickynote            abre (mostra a nota)
+    omarchy-stickynote --hidden   inicia residente mas escondido (autostart)
+    omarchy-stickynote --toggle   mostra/esconde a instância em execução
+    omarchy-stickynote --show / --hide
+
+A cada mudança, sinaliza o waybar (SIGRTMIN+11) pra atualizar o contador.
+"""
+
+import json
+import os
+import subprocess
+
+import gi
+
+gi.require_version("Gtk", "4.0")
+from gi.repository import Gtk, Gdk, GLib, Gio, Pango  # noqa: E402
+
+APP_ID = "com.omarchy.stickynote"
+WAYBAR_SIGNAL = "-RTMIN+11"  # casa com "signal": 11 no config.jsonc
+
+DATA_DIR = os.path.join(GLib.get_user_data_dir(), "omarchy-stickynote")
+DATA_FILE = os.path.join(DATA_DIR, "notes.json")
+PID_FILE = os.path.join(GLib.get_user_runtime_dir(), "omarchy-stickynote.pid")
+
+CSS = """
+window {
+    background-color: #fdef79;
+    color: #2a2612;
+    font-family: inherit;
+}
+.sticky-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    opacity: 0.45;
+    margin: 12px 14px 2px 14px;
+}
+.input-wrap {
+    background-color: rgba(0, 0, 0, 0.06);
+    border-radius: 10px;
+    margin: 6px 12px 6px 12px;
+}
+.input-wrap:focus-within { background-color: rgba(0, 0, 0, 0.11); }
+textview.add-entry, textview.add-entry text {
+    background: transparent;
+    color: #2a2612;
+    caret-color: #2a2612;
+    font-size: 14px;
+}
+textview.add-entry { padding: 8px 10px; }
+.placeholder {
+    color: rgba(42, 38, 18, 0.45);
+    font-size: 14px;
+    margin: 8px 11px;
+}
+checkbutton.item {
+    padding: 4px 12px;
+    margin: 1px 6px;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #2a2612;
+}
+checkbutton.item:hover { background-color: rgba(0, 0, 0, 0.05); }
+checkbutton.item label { color: #2a2612; }
+checkbutton.item check {
+    min-width: 18px;
+    min-height: 18px;
+    margin-right: 8px;
+    border-radius: 6px;
+    border: 2px solid rgba(42, 38, 18, 0.55);
+    background: transparent;
+    box-shadow: none;
+}
+checkbutton.item check:checked {
+    background-color: #2a2612;
+    border-color: #2a2612;
+    color: #fdef79;
+}
+checkbutton.item.done label { text-decoration: line-through; opacity: 0.4; }
+.empty { opacity: 0.4; font-style: italic; font-size: 13px; }
+
+/* entrada suave ao adicionar */
+@keyframes note-in {
+    0%   { opacity: 0; margin-left: 22px; }
+    100% { opacity: 1; margin-left: 6px; }
+}
+checkbutton.item.adding { animation: note-in 260ms ease-out; }
+
+/* flash ao concluir + fade de saída */
+@keyframes done-flash {
+    0%   { background-color: rgba(255, 255, 255, 0); }
+    35%  { background-color: rgba(255, 255, 255, 0.60); }
+    100% { background-color: rgba(255, 255, 255, 0); }
+}
+checkbutton.item.done { animation: done-flash 220ms ease-out; }
+checkbutton.item.removing { opacity: 0; transition: opacity 120ms ease-in; }
+
+/* burst no checkbox: a sequência é controlada pelo app em qualquer tema GTK */
+.sparkle {
+    font-size: 13px;
+    font-weight: 700;
+    color: #8a6500;
+}
+"""
+
+
+class StickyNote(Gtk.ApplicationWindow):
+    def __init__(self, app):
+        super().__init__(application=app)
+        self.set_title("Sticky Note")
+        self.set_decorated(False)  # sem titlebar; o Hyprland cuida de borda/arredondamento
+        self.set_default_size(360, 440)
+        self.set_hide_on_close(True)  # fechar só esconde, não mata o app
+
+        root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        self.set_child(root)
+
+        title = Gtk.Label(label="NOTAS", xalign=0)
+        title.add_css_class("sticky-title")
+        root.append(title)
+
+        # input multilinha: Enter cria a nota, Shift+Enter quebra linha
+        input_wrap = Gtk.Overlay()
+        input_wrap.add_css_class("input-wrap")
+
+        input_scroll = Gtk.ScrolledWindow()
+        input_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        input_scroll.set_min_content_height(20)
+        input_scroll.set_max_content_height(110)
+        input_scroll.set_propagate_natural_height(True)
+
+        self.textview = Gtk.TextView()
+        self.textview.add_css_class("add-entry")
+        self.textview.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
+        self.textview.set_accepts_tab(False)
+        self.buffer = self.textview.get_buffer()
+        self.buffer.connect("changed", self._update_placeholder)
+        input_scroll.set_child(self.textview)
+        input_wrap.set_child(input_scroll)
+
+        self.placeholder = Gtk.Label(label="＋ nova nota…")
+        self.placeholder.add_css_class("placeholder")
+        self.placeholder.set_halign(Gtk.Align.START)
+        self.placeholder.set_valign(Gtk.Align.START)
+        self.placeholder.set_can_target(False)  # cliques passam pro textview
+        input_wrap.add_overlay(self.placeholder)
+        root.append(input_wrap)
+
+        ic = Gtk.EventControllerKey()
+        ic.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)  # pega Enter antes do textview
+        ic.connect("key-pressed", self.on_input_key)
+        self.textview.add_controller(ic)
+
+        self.overlay = Gtk.Overlay()
+        self.overlay.set_vexpand(True)
+        root.append(self.overlay)
+
+        scroller = Gtk.ScrolledWindow()
+        scroller.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        self.overlay.set_child(scroller)
+
+        # Camada global acima do scroller: o burst nunca fica atrás do item.
+        self.effects_layer = Gtk.Fixed()
+        self.effects_layer.set_hexpand(True)
+        self.effects_layer.set_vexpand(True)
+        self.effects_layer.set_halign(Gtk.Align.FILL)
+        self.effects_layer.set_valign(Gtk.Align.FILL)
+        self.effects_layer.set_can_target(False)
+        self.effects_layer.set_overflow(Gtk.Overflow.VISIBLE)
+        self.overlay.add_overlay(self.effects_layer)
+        self.overlay.set_measure_overlay(self.effects_layer, False)
+        self.overlay.set_clip_overlay(self.effects_layer, False)
+
+        stack = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        scroller.set_child(stack)
+
+        self.items_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, margin_bottom=10)
+        stack.append(self.items_box)
+
+        self.empty_label = Gtk.Label(label="tudo limpo ✓", vexpand=True)
+        self.empty_label.add_css_class("empty")
+        stack.append(self.empty_label)
+
+        keys = Gtk.EventControllerKey()
+        keys.connect("key-pressed", self.on_key)
+        self.add_controller(keys)
+
+        self.connect("map", lambda *_: self.textview.grab_focus())
+
+        self.load()
+        self._update_placeholder()
+        self.set_visible(False)  # nasce escondido; só mapeia via present() (show_note)
+
+    # ---- mostrar / esconder ------------------------------------------------
+
+    def show_note(self):
+        self.set_visible(True)
+        self.present()
+        self.textview.grab_focus()
+
+    def hide_note(self):
+        self.set_visible(False)
+
+    def toggle(self):
+        if self.get_visible():
+            self.hide_note()
+        else:
+            self.show_note()
+
+    # ---- dados -------------------------------------------------------------
+
+    def load(self):
+        notes = []
+        try:
+            with open(DATA_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            if isinstance(data, list):
+                notes = [str(x) for x in data if str(x).strip()]
+        except (FileNotFoundError, json.JSONDecodeError, OSError):
+            notes = []
+        for text in notes:
+            self.add_row(text)
+        self.update_empty()
+
+    def save(self):
+        notes = []
+        child = self.items_box.get_first_child()
+        while child is not None:
+            text = getattr(child, "note_text", None)
+            if text is not None:
+                notes.append(text)
+            child = child.get_next_sibling()
+        try:
+            os.makedirs(DATA_DIR, exist_ok=True)
+            tmp = DATA_FILE + ".tmp"
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(notes, f, ensure_ascii=False)
+            os.replace(tmp, DATA_FILE)
+        except OSError as e:
+            print(f"stickynote: falha ao salvar: {e}")
+        self.update_empty()
+        self.notify_waybar()
+
+    def notify_waybar(self):
+        try:
+            subprocess.Popen(
+                ["pkill", WAYBAR_SIGNAL, "waybar"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        except OSError:
+            pass
+
+    # ---- UI ----------------------------------------------------------------
+
+    def add_row(self, text, animate=False):
+        container = Gtk.Overlay()
+        container.note_text = text
+
+        row = Gtk.CheckButton(label=text)
+        row.add_css_class("item")
+        row.set_hexpand(True)
+        row.note_container = container
+        label = row.get_last_child()  # a Gtk.Label interna do checkbutton
+        if isinstance(label, Gtk.Label):
+            label.set_wrap(True)
+            label.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
+            label.set_max_width_chars(24)  # largura NÃO cresce com o texto; quebra linha
+            label.set_xalign(0)
+            label.set_hexpand(True)
+        row.connect("toggled", self.on_toggle)
+
+        container.set_child(row)
+        self.items_box.append(container)
+
+        if animate:
+            row.add_css_class("adding")
+            GLib.timeout_add(280, self._finish_adding, row)
+        return row
+
+    def _finish_adding(self, row):
+        row.remove_css_class("adding")
+        return GLib.SOURCE_REMOVE
+
+    def _update_placeholder(self, *_):
+        self.placeholder.set_visible(self.buffer.get_char_count() == 0)
+
+    def on_input_key(self, _controller, keyval, _keycode, state):
+        enter = keyval in (Gdk.KEY_Return, Gdk.KEY_KP_Enter, Gdk.KEY_ISO_Enter)
+        shift = bool(state & Gdk.ModifierType.SHIFT_MASK)
+        if enter and not shift:
+            self.commit_note()
+            return True  # consome: não quebra linha, cria a nota
+        if keyval == Gdk.KEY_Escape:
+            self.hide_note()
+            return True
+        return False  # Shift+Enter cai aqui → textview quebra linha normalmente
+
+    def commit_note(self):
+        start, end = self.buffer.get_bounds()
+        text = self.buffer.get_text(start, end, False).strip()
+        if not text:
+            return
+        self.add_row(text, animate=True)
+        self.buffer.set_text("", 0)
+        self.save()
+
+    def on_toggle(self, row):
+        if not row.get_active():
+            return
+        container = row.note_container
+        row.add_css_class("done")
+        row.set_sensitive(False)
+        container.note_text = None  # tira já da persistência
+        self._show_burst(row)
+        self.save()
+        GLib.timeout_add(180, self._begin_removal, row)
+        GLib.timeout_add(360, self._remove_row, container)
+
+    def _show_burst(self, row):
+        ok, bounds = row.compute_bounds(self.overlay)
+        x = bounds.get_x() - 3 if ok else 3
+        y = bounds.get_y() + bounds.get_height() / 2 - 13 if ok else 3
+
+        burst = Gtk.Label(label="  ✦")
+        burst.add_css_class("sparkle")
+        burst.set_can_target(False)
+        burst.set_overflow(Gtk.Overflow.VISIBLE)
+        self.effects_layer.put(burst, x, y)
+
+        GLib.timeout_add(55, self._set_burst, burst, "✧ ✦ ✧\n  ✦")
+        GLib.timeout_add(120, self._set_burst, burst, "✦    ✧\n  ✦\n✧    ✦")
+        GLib.timeout_add(220, self._set_burst, burst, "·     ✧\n\n✧     ·")
+        GLib.timeout_add(420, self._remove_burst, burst)
+
+    def _set_burst(self, burst, text):
+        if burst.get_parent() is self.effects_layer:
+            burst.set_text(text)
+        return GLib.SOURCE_REMOVE
+
+    def _remove_burst(self, burst):
+        if burst.get_parent() is self.effects_layer:
+            self.effects_layer.remove(burst)
+        return GLib.SOURCE_REMOVE
+
+    def _begin_removal(self, row):
+        row.add_css_class("removing")
+        return GLib.SOURCE_REMOVE
+
+    def _remove_row(self, container):
+        if container.get_parent() is self.items_box:
+            self.items_box.remove(container)
+        self.update_empty()
+        return GLib.SOURCE_REMOVE
+
+    def update_empty(self):
+        has_items = self.items_box.get_first_child() is not None
+        self.items_box.set_visible(has_items)
+        self.empty_label.set_visible(not has_items)
+
+    # ---- teclado -----------------------------------------------------------
+
+    def on_key(self, _controller, keyval, _keycode, _state):
+        if keyval == Gdk.KEY_Escape:
+            self.hide_note()
+            return True
+        return False
+
+
+class StickyApp(Gtk.Application):
+    def __init__(self):
+        super().__init__(
+            application_id=APP_ID,
+            flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE,
+        )
+        self.win = None
+
+    def do_startup(self):
+        Gtk.Application.do_startup(self)
+        provider = Gtk.CssProvider()
+        try:
+            provider.load_from_string(CSS)  # GTK 4.12+
+        except AttributeError:
+            provider.load_from_data(CSS.encode("utf-8"))
+        Gtk.StyleContext.add_provider_for_display(
+            Gdk.Display.get_default(),
+            provider,
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
+        )
+        self.hold()  # residente mesmo com a janela escondida
+        try:
+            with open(PID_FILE, "w") as f:
+                f.write(str(os.getpid()))
+        except OSError:
+            pass
+
+    def do_shutdown(self):
+        try:
+            os.remove(PID_FILE)
+        except OSError:
+            pass
+        Gtk.Application.do_shutdown(self)
+
+    def ensure_window(self):
+        if self.win is None:
+            self.win = StickyNote(self)
+
+    def do_command_line(self, command_line):
+        opts = command_line.get_arguments()[1:]
+        if "--hidden" in opts:
+            # No autostart, nem constrói a janela: evita o GTK mapeá-la antes
+            # de processar a flag. Se a instância já estiver visível, esconde.
+            if self.win is not None:
+                self.win.hide_note()
+            return 0
+
+        self.ensure_window()
+        if "--toggle" in opts:
+            self.win.toggle()
+        elif "--hide" in opts:
+            self.win.hide_note()
+        else:  # --show ou sem flag
+            self.win.show_note()
+        return 0
+
+
+if __name__ == "__main__":
+    import sys
+
+    sys.exit(StickyApp().run(sys.argv))

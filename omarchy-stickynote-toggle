@@ -1,0 +1,18 @@
+#!/bin/bash
+# Mostra/esconde o sticky note. Se já roda, manda --toggle pra instância
+# (via instância única do GTK). Se não, inicia já mostrando.
+set -euo pipefail
+
+BIN="$(dirname "$(readlink -f "$0")")/omarchy-stickynote"
+PID_FILE="${XDG_RUNTIME_DIR:-/tmp}/omarchy-stickynote.pid"
+
+if [ -f "$PID_FILE" ] && kill -0 "$(cat "$PID_FILE" 2>/dev/null)" 2>/dev/null; then
+  "$BIN" --toggle
+else
+  if command -v uwsm-app >/dev/null 2>&1; then
+    uwsm-app -- "$BIN" >/dev/null 2>&1 &
+  else
+    "$BIN" >/dev/null 2>&1 &
+  fi
+  disown
+fi
