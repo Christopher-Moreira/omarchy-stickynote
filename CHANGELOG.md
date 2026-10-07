@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.3 - 2026-10-07
+
+- Replaced the application icon with the new neon checklist artwork.
+- Added optimized PNG icon assets from 32 to 512 pixels for desktop launchers.
+
 ## 1.0.2 - 2026-10-07
 
 - Completing a note now requires clicking its checkbox; clicking the text no longer toggles it.

@@ -1,6 +1,6 @@
 # Maintainer: Christopher Moreira <christophermoreira.dev@gmail.com>
 pkgname=omarchy-stickynote
-pkgver=1.0.2
+pkgver=1.0.3
 pkgrel=1
 pkgdesc='Native GTK4 sticky-note checklist for Omarchy and Hyprland'
 arch=('any')
@@ -13,7 +13,7 @@ optdepends=(
   'walker: find Sticky Notes through the application launcher'
 )
 source=("$pkgname-$pkgver.tar.gz::$url/releases/download/v$pkgver/$pkgname-$pkgver.tar.gz")
-sha256sums=('065ac685f57acdee227da0a28513bec27903d489be59ff95d3c3a2b933bb6c9b')
+sha256sums=('3e075c03713f6ad9099eda7632654064c685e96c7e8b331404dfe8b414e21884')
 
 package() {
   cd "$srcdir/$pkgname-$pkgver"
@@ -24,8 +24,11 @@ package() {
 
   install -Dm644 data/com.omarchy.stickynote.desktop \
     "$pkgdir/usr/share/applications/com.omarchy.stickynote.desktop"
-  install -Dm644 data/icons/hicolor/scalable/apps/com.omarchy.stickynote.svg \
-    "$pkgdir/usr/share/icons/hicolor/scalable/apps/com.omarchy.stickynote.svg"
+  local size
+  for size in 32x32 48x48 64x64 128x128 256x256 512x512; do
+    install -Dm644 "data/icons/hicolor/$size/apps/com.omarchy.stickynote.png" \
+      "$pkgdir/usr/share/icons/hicolor/$size/apps/com.omarchy.stickynote.png"
+  done
 
   install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
   install -Dm644 CHANGELOG.md "$pkgdir/usr/share/doc/$pkgname/CHANGELOG.md"
