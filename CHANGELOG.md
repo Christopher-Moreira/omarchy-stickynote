@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.5 - 2026-10-07
+
+- Added a native three-bar drag handle beside each note.
+- Added drag-and-drop checklist reordering with immediate persistence.
+- Added visual feedback for the dragged row and drop target.
+
 ## 1.0.4 - 2026-10-07
 
 - Added a native symbolic pencil button beside every note.

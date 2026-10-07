@@ -22,7 +22,7 @@ import subprocess
 import gi
 
 gi.require_version("Gtk", "4.0")
-from gi.repository import Gtk, Gdk, GLib, Gio, Pango  # noqa: E402
+from gi.repository import Gtk, Gdk, GLib, Gio, GObject, Pango  # noqa: E402
 
 APP_ID = "com.omarchy.stickynote"
 WAYBAR_SIGNAL = "-RTMIN+11"  # Matches "signal": 11 in config.jsonc.
@@ -96,6 +96,17 @@ button.edit-button:hover {
     color: #2a2612;
 }
 button.edit-button image { -gtk-icon-size: 14px; }
+image.drag-handle {
+    -gtk-icon-size: 16px;
+    padding: 5px 2px 5px 6px;
+    color: rgba(42, 38, 18, 0.48);
+}
+image.drag-handle:hover { color: #2a2612; }
+box.item.dragging { opacity: 0.48; }
+box.item.drop-target {
+    background-color: rgba(255, 255, 255, 0.38);
+    box-shadow: inset 0 2px rgba(42, 38, 18, 0.38);
+}
 checkbutton.item-check {
     padding: 0;
     margin-right: 8px;
@@ -148,6 +159,7 @@ class StickyNote(Gtk.ApplicationWindow):
         self.set_decorated(False)  # Hyprland handles the border and rounding.
         self.set_default_size(360, 440)
         self.set_hide_on_close(True)  # Closing hides instead of quitting.
+        self.dragged_container = None
 
         root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.set_child(root)
@@ -341,10 +353,30 @@ class StickyNote(Gtk.ApplicationWindow):
         edit_button.connect("clicked", self.on_edit_clicked, container)
         line.append(edit_button)
 
+        drag_handle = Gtk.Image.new_from_icon_name("open-menu-symbolic")
+        drag_handle.add_css_class("drag-handle")
+        drag_handle.set_tooltip_text("Drag to reorder")
+        drag_handle.set_cursor_from_name("grab")
+
+        drag_source = Gtk.DragSource()
+        drag_source.set_actions(Gdk.DragAction.MOVE)
+        drag_source.connect("prepare", self.on_drag_prepare, container)
+        drag_source.connect("drag-begin", self.on_drag_begin, container)
+        drag_source.connect("drag-end", self.on_drag_end, container)
+        drag_handle.add_controller(drag_source)
+        line.append(drag_handle)
+
+        drop_target = Gtk.DropTarget.new(GObject.TYPE_STRING, Gdk.DragAction.MOVE)
+        drop_target.connect("enter", self.on_drop_enter, line)
+        drop_target.connect("leave", self.on_drop_leave, line)
+        drop_target.connect("drop", self.on_drop, container, line)
+        line.add_controller(drop_target)
+
         container.note_label = label
         container.note_editor = editor
         container.note_stack = text_stack
         container.edit_button = edit_button
+        container.note_line = line
         container.is_editing = False
 
         container.set_child(line)
@@ -426,6 +458,53 @@ class StickyNote(Gtk.ApplicationWindow):
             self.finish_edit(container, save_changes=False)
             return True
         return False
+
+    def on_drag_prepare(self, _source, _x, _y, container):
+        self.dragged_container = container
+        value = GObject.Value()
+        value.init(GObject.TYPE_STRING)
+        value.set_string("omarchy-stickynote-row")
+        return Gdk.ContentProvider.new_for_value(value)
+
+    def on_drag_begin(self, _source, _drag, container):
+        container.note_line.add_css_class("dragging")
+
+    def on_drag_end(self, _source, _drag, _delete_data, container):
+        container.note_line.remove_css_class("dragging")
+        self.dragged_container = None
+
+    def on_drop_enter(self, _target, _x, _y, line):
+        line.add_css_class("drop-target")
+        return Gdk.DragAction.MOVE
+
+    def on_drop_leave(self, _target, line):
+        line.remove_css_class("drop-target")
+
+    def on_drop(self, _target, _value, _x, y, target_container, line):
+        line.remove_css_class("drop-target")
+        source = self.dragged_container
+        if source is None or source is target_container:
+            return False
+
+        children = []
+        child = self.items_box.get_first_child()
+        while child is not None:
+            children.append(child)
+            child = child.get_next_sibling()
+
+        children.remove(source)
+        target_index = children.index(target_container)
+        if y >= line.get_height() / 2:
+            target_index += 1
+        children.insert(target_index, source)
+
+        previous = None
+        for child in children:
+            self.items_box.reorder_child_after(child, previous)
+            previous = child
+
+        self.save()
+        return True
 
     def on_toggle(self, checkbox):
         if not checkbox.get_active():

@@ -1,6 +1,6 @@
 # Maintainer: Christopher Moreira <christophermoreira.dev@gmail.com>
 pkgname=omarchy-stickynote
-pkgver=1.0.4
+pkgver=1.0.5
 pkgrel=1
 pkgdesc='Native GTK4 sticky-note checklist for Omarchy and Hyprland'
 arch=('any')
@@ -13,7 +13,7 @@ optdepends=(
   'walker: find Sticky Notes through the application launcher'
 )
 source=("$pkgname-$pkgver.tar.gz::$url/releases/download/v$pkgver/$pkgname-$pkgver.tar.gz")
-sha256sums=('1e23b3a0c219ddf7ff169ebc26f81dad0fcdccbdf48e84fe79955148e723861d')
+sha256sums=('ffa86bcc61a7ffbe58053ce9827c4454badff0d0b321730defdb418218253d8b')
 
 package() {
   cd "$srcdir/$pkgname-$pkgver"

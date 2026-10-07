@@ -23,8 +23,8 @@ as soon as they happen.
 ### Arch Linux / Omarchy package
 
 ```bash
-curl -LO https://github.com/Christopher-Moreira/omarchy-stickynote/releases/download/v1.0.4/omarchy-stickynote-1.0.4-1-any.pkg.tar.zst
-sudo pacman -U omarchy-stickynote-1.0.4-1-any.pkg.tar.zst
+curl -LO https://github.com/Christopher-Moreira/omarchy-stickynote/releases/download/v1.0.5/omarchy-stickynote-1.0.5-1-any.pkg.tar.zst
+sudo pacman -U omarchy-stickynote-1.0.5-1-any.pkg.tar.zst
 ```
 
 After installation, press `SUPER + SPACE` and search for **Sticky Notes**. The
@@ -37,7 +37,7 @@ the regular `yay -S omarchy-stickynote` flow when registrations reopen.
 
 ### Manual release
 
-Download `omarchy-stickynote-1.0.4.tar.gz` from the releases page, extract it,
+Download `omarchy-stickynote-1.0.5.tar.gz` from the releases page, extract it,
 and run:
 
 ```bash
@@ -126,6 +126,8 @@ Restart Waybar with `omarchy restart waybar`.
 - Click a checkbox—complete and remove the item.
 - Click the pencil icon—edit an item; click the confirmation icon or press
   `Ctrl + Enter` to save, or press `Escape` to cancel.
+- Drag an item from its three-bar handle—reorder the checklist and save the new
+  order immediately.
 - Press `Escape`—hide the note.
 
 ## Command line
@@ -142,7 +144,7 @@ omarchy-stickynote --hide
 
 ```bash
 make test
-make dist VERSION=1.0.4
+make dist VERSION=1.0.5
 ```
 
 `packaging/aur/PKGBUILD` contains the Arch/AUR package recipe. Releases use
