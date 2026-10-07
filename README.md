@@ -20,15 +20,20 @@ as soon as they happen.
 
 ## Installation
 
-### Arch Linux / Omarchy (AUR)
+### Arch Linux / Omarchy package
 
 ```bash
-yay -S omarchy-stickynote
+curl -LO https://github.com/Christopher-Moreira/omarchy-stickynote/releases/download/v1.0.1/omarchy-stickynote-1.0.1-1-any.pkg.tar.zst
+sudo pacman -U omarchy-stickynote-1.0.1-1-any.pkg.tar.zst
 ```
 
 After installation, press `SUPER + SPACE` and search for **Sticky Notes**. The
 package installs an XDG desktop entry in `/usr/share/applications`, so it also
 works with other compatible application launchers.
+
+The AUR recipe is ready under `packaging/aur`. Publishing is pending because
+new AUR account registration is temporarily closed; the package will move to
+the regular `yay -S omarchy-stickynote` flow when registrations reopen.
 
 ### Manual release
 
