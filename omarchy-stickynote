@@ -62,30 +62,33 @@ textview.add-entry { padding: 8px 10px; }
     font-size: 14px;
     margin: 8px 11px;
 }
-checkbutton.item {
+box.item {
     padding: 4px 12px;
     margin: 1px 6px;
     border-radius: 8px;
     font-size: 14px;
     color: #2a2612;
 }
-checkbutton.item:hover { background-color: rgba(0, 0, 0, 0.05); }
-checkbutton.item label { color: #2a2612; }
-checkbutton.item check {
+box.item:hover { background-color: rgba(0, 0, 0, 0.05); }
+box.item label.item-label { color: #2a2612; }
+checkbutton.item-check {
+    padding: 0;
+    margin-right: 8px;
+}
+checkbutton.item-check check {
     min-width: 18px;
     min-height: 18px;
-    margin-right: 8px;
     border-radius: 6px;
     border: 2px solid rgba(42, 38, 18, 0.55);
     background: transparent;
     box-shadow: none;
 }
-checkbutton.item check:checked {
+checkbutton.item-check check:checked {
     background-color: #2a2612;
     border-color: #2a2612;
     color: #fdef79;
 }
-checkbutton.item.done label { text-decoration: line-through; opacity: 0.4; }
+box.item.done label { text-decoration: line-through; opacity: 0.4; }
 .empty { opacity: 0.4; font-style: italic; font-size: 13px; }
 
 /* Smooth entry animation when adding a note. */
@@ -93,7 +96,7 @@ checkbutton.item.done label { text-decoration: line-through; opacity: 0.4; }
     0%   { opacity: 0; margin-left: 22px; }
     100% { opacity: 1; margin-left: 6px; }
 }
-checkbutton.item.adding { animation: note-in 260ms ease-out; }
+box.item.adding { animation: note-in 260ms ease-out; }
 
 /* Completion flash and exit fade. */
 @keyframes done-flash {
@@ -101,8 +104,8 @@ checkbutton.item.adding { animation: note-in 260ms ease-out; }
     35%  { background-color: rgba(255, 255, 255, 0.60); }
     100% { background-color: rgba(255, 255, 255, 0); }
 }
-checkbutton.item.done { animation: done-flash 220ms ease-out; }
-checkbutton.item.removing { opacity: 0; transition: opacity 120ms ease-in; }
+box.item.done { animation: done-flash 220ms ease-out; }
+box.item.removing { opacity: 0; transition: opacity 120ms ease-in; }
 
 /* Checkbox burst controlled by the app so it works with any GTK theme. */
 .sparkle {
@@ -266,26 +269,35 @@ class StickyNote(Gtk.ApplicationWindow):
         container = Gtk.Overlay()
         container.note_text = text
 
-        row = Gtk.CheckButton(label=text)
-        row.add_css_class("item")
-        row.set_hexpand(True)
-        row.note_container = container
-        label = row.get_last_child()  # a Gtk.Label interna do checkbutton
-        if isinstance(label, Gtk.Label):
-            label.set_wrap(True)
-            label.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
-            label.set_max_width_chars(24)  # Keep the row fixed-width and wrap text.
-            label.set_xalign(0)
-            label.set_hexpand(True)
-        row.connect("toggled", self.on_toggle)
+        line = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        line.add_css_class("item")
+        line.set_hexpand(True)
 
-        container.set_child(row)
+        checkbox = Gtk.CheckButton()
+        checkbox.add_css_class("item-check")
+        checkbox.set_valign(Gtk.Align.START)
+        checkbox.note_container = container
+        checkbox.note_line = line
+        checkbox.connect("toggled", self.on_toggle)
+        line.append(checkbox)
+
+        label = Gtk.Label(label=text)
+        label.add_css_class("item-label")
+        label.set_wrap(True)
+        label.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
+        label.set_max_width_chars(24)  # Keep the row fixed-width and wrap text.
+        label.set_xalign(0)
+        label.set_hexpand(True)
+        label.set_selectable(False)
+        line.append(label)
+
+        container.set_child(line)
         self.items_box.append(container)
 
         if animate:
-            row.add_css_class("adding")
-            GLib.timeout_add(280, self._finish_adding, row)
-        return row
+            line.add_css_class("adding")
+            GLib.timeout_add(280, self._finish_adding, line)
+        return checkbox
 
     def _finish_adding(self, row):
         row.remove_css_class("adding")
@@ -314,16 +326,17 @@ class StickyNote(Gtk.ApplicationWindow):
         self.buffer.set_text("", 0)
         self.save()
 
-    def on_toggle(self, row):
-        if not row.get_active():
+    def on_toggle(self, checkbox):
+        if not checkbox.get_active():
             return
-        container = row.note_container
-        row.add_css_class("done")
-        row.set_sensitive(False)
+        container = checkbox.note_container
+        line = checkbox.note_line
+        line.add_css_class("done")
+        checkbox.set_sensitive(False)
         container.note_text = None  # Remove from persistence immediately.
-        self._show_burst(row)
+        self._show_burst(checkbox)
         self.save()
-        GLib.timeout_add(180, self._begin_removal, row)
+        GLib.timeout_add(180, self._begin_removal, line)
         GLib.timeout_add(360, self._remove_row, container)
 
     def _show_burst(self, row):

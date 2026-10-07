@@ -23,8 +23,8 @@ as soon as they happen.
 ### Arch Linux / Omarchy package
 
 ```bash
-curl -LO https://github.com/Christopher-Moreira/omarchy-stickynote/releases/download/v1.0.1/omarchy-stickynote-1.0.1-1-any.pkg.tar.zst
-sudo pacman -U omarchy-stickynote-1.0.1-1-any.pkg.tar.zst
+curl -LO https://github.com/Christopher-Moreira/omarchy-stickynote/releases/download/v1.0.2/omarchy-stickynote-1.0.2-1-any.pkg.tar.zst
+sudo pacman -U omarchy-stickynote-1.0.2-1-any.pkg.tar.zst
 ```
 
 After installation, press `SUPER + SPACE` and search for **Sticky Notes**. The
@@ -37,7 +37,7 @@ the regular `yay -S omarchy-stickynote` flow when registrations reopen.
 
 ### Manual release
 
-Download `omarchy-stickynote-1.0.1.tar.gz` from the releases page, extract it,
+Download `omarchy-stickynote-1.0.2.tar.gz` from the releases page, extract it,
 and run:
 
 ```bash
@@ -140,7 +140,7 @@ omarchy-stickynote --hide
 
 ```bash
 make test
-make dist VERSION=1.0.1
+make dist VERSION=1.0.2
 ```
 
 `packaging/aur/PKGBUILD` contains the Arch/AUR package recipe. Releases use
