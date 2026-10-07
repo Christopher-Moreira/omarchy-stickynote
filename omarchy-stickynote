@@ -71,6 +71,31 @@ box.item {
 }
 box.item:hover { background-color: rgba(0, 0, 0, 0.05); }
 box.item label.item-label { color: #2a2612; }
+textview.item-editor, textview.item-editor text {
+    background-color: rgba(255, 255, 255, 0.32);
+    color: #2a2612;
+    caret-color: #2a2612;
+}
+textview.item-editor {
+    padding: 3px 5px;
+    border-radius: 6px;
+}
+button.edit-button {
+    min-width: 24px;
+    min-height: 24px;
+    padding: 2px;
+    margin-left: 5px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    box-shadow: none;
+    color: rgba(42, 38, 18, 0.58);
+}
+button.edit-button:hover {
+    background-color: rgba(0, 0, 0, 0.09);
+    color: #2a2612;
+}
+button.edit-button image { -gtk-icon-size: 14px; }
 checkbutton.item-check {
     padding: 0;
     margin-right: 8px;
@@ -289,7 +314,38 @@ class StickyNote(Gtk.ApplicationWindow):
         label.set_xalign(0)
         label.set_hexpand(True)
         label.set_selectable(False)
-        line.append(label)
+
+        editor = Gtk.TextView()
+        editor.add_css_class("item-editor")
+        editor.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
+        editor.set_accepts_tab(False)
+
+        editor_keys = Gtk.EventControllerKey()
+        editor_keys.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
+        editor_keys.connect("key-pressed", self.on_editor_key, container)
+        editor.add_controller(editor_keys)
+
+        text_stack = Gtk.Stack()
+        text_stack.set_hexpand(True)
+        text_stack.set_transition_type(Gtk.StackTransitionType.CROSSFADE)
+        text_stack.set_transition_duration(100)
+        text_stack.add_named(label, "label")
+        text_stack.add_named(editor, "editor")
+        text_stack.set_visible_child_name("label")
+        line.append(text_stack)
+
+        edit_button = Gtk.Button.new_from_icon_name("document-edit-symbolic")
+        edit_button.add_css_class("edit-button")
+        edit_button.set_tooltip_text("Edit note")
+        edit_button.set_valign(Gtk.Align.START)
+        edit_button.connect("clicked", self.on_edit_clicked, container)
+        line.append(edit_button)
+
+        container.note_label = label
+        container.note_editor = editor
+        container.note_stack = text_stack
+        container.edit_button = edit_button
+        container.is_editing = False
 
         container.set_child(line)
         self.items_box.append(container)
@@ -325,6 +381,51 @@ class StickyNote(Gtk.ApplicationWindow):
         self.add_row(text, animate=True)
         self.buffer.set_text("", 0)
         self.save()
+
+    def on_edit_clicked(self, _button, container):
+        if container.is_editing:
+            self.finish_edit(container, save_changes=True)
+        else:
+            self.begin_edit(container)
+
+    def begin_edit(self, container):
+        edit_buffer = container.note_editor.get_buffer()
+        edit_buffer.set_text(container.note_text)
+        edit_buffer.place_cursor(edit_buffer.get_end_iter())
+        container.note_stack.set_visible_child_name("editor")
+        container.edit_button.set_icon_name("emblem-ok-symbolic")
+        container.edit_button.set_tooltip_text("Save note")
+        container.is_editing = True
+        container.note_editor.grab_focus()
+
+    def finish_edit(self, container, save_changes):
+        if save_changes:
+            edit_buffer = container.note_editor.get_buffer()
+            start, end = edit_buffer.get_bounds()
+            text = edit_buffer.get_text(start, end, False).strip()
+            if not text:
+                container.note_editor.grab_focus()
+                return
+            if text != container.note_text:
+                container.note_text = text
+                container.note_label.set_text(text)
+                self.save()
+
+        container.note_stack.set_visible_child_name("label")
+        container.edit_button.set_icon_name("document-edit-symbolic")
+        container.edit_button.set_tooltip_text("Edit note")
+        container.is_editing = False
+
+    def on_editor_key(self, _controller, keyval, _keycode, state, container):
+        enter = keyval in (Gdk.KEY_Return, Gdk.KEY_KP_Enter, Gdk.KEY_ISO_Enter)
+        control = bool(state & Gdk.ModifierType.CONTROL_MASK)
+        if enter and control:
+            self.finish_edit(container, save_changes=True)
+            return True
+        if keyval == Gdk.KEY_Escape:
+            self.finish_edit(container, save_changes=False)
+            return True
+        return False
 
     def on_toggle(self, checkbox):
         if not checkbox.get_active():

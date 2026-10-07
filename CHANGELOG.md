@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.4 - 2026-10-07
+
+- Added a native symbolic pencil button beside every note.
+- Added multiline inline editing with explicit save and cancel actions.
+- Added `Ctrl+Enter` to save an edit and `Escape` to cancel it.
+
 ## 1.0.3 - 2026-10-07
 
 - Replaced the application icon with the new neon checklist artwork.
