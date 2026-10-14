@@ -1,4 +1,4 @@
-VERSION ?= 1.0.5
+VERSION ?= 1.0.6
 NAME := omarchy-stickynote
 DIST_ROOT := dist/$(NAME)-$(VERSION)
 ARCHIVE := dist/$(NAME)-$(VERSION).tar.gz
@@ -23,7 +23,7 @@ dist: test clean
 	install -Dm644 README.md "$(DIST_ROOT)/README.md"
 	install -Dm644 CHANGELOG.md "$(DIST_ROOT)/CHANGELOG.md"
 	install -Dm644 LICENSE "$(DIST_ROOT)/LICENSE"
-	tar --sort=name --mtime='UTC 2026-10-07' --owner=0 --group=0 --numeric-owner -czf "$(ARCHIVE)" -C dist "$(NAME)-$(VERSION)"
+	tar --sort=name --mtime='UTC 2026-10-14' --owner=0 --group=0 --numeric-owner -czf "$(ARCHIVE)" -C dist "$(NAME)-$(VERSION)"
 	sha256sum "$(ARCHIVE)"
 
 clean:

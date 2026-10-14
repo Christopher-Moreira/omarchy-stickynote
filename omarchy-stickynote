@@ -395,6 +395,8 @@ class StickyNote(Gtk.ApplicationWindow):
         self.placeholder.set_visible(self.buffer.get_char_count() == 0)
 
     def on_input_key(self, _controller, keyval, _keycode, state):
+        if self.handle_clipboard_shortcut(self.textview, keyval, state):
+            return True
         enter = keyval in (Gdk.KEY_Return, Gdk.KEY_KP_Enter, Gdk.KEY_ISO_Enter)
         shift = bool(state & Gdk.ModifierType.SHIFT_MASK)
         if enter and not shift:
@@ -449,6 +451,8 @@ class StickyNote(Gtk.ApplicationWindow):
         container.is_editing = False
 
     def on_editor_key(self, _controller, keyval, _keycode, state, container):
+        if self.handle_clipboard_shortcut(container.note_editor, keyval, state):
+            return True
         enter = keyval in (Gdk.KEY_Return, Gdk.KEY_KP_Enter, Gdk.KEY_ISO_Enter)
         control = bool(state & Gdk.ModifierType.CONTROL_MASK)
         if enter and control:
@@ -456,6 +460,25 @@ class StickyNote(Gtk.ApplicationWindow):
             return True
         if keyval == Gdk.KEY_Escape:
             self.finish_edit(container, save_changes=False)
+            return True
+        return False
+
+    def handle_clipboard_shortcut(self, textview, keyval, state):
+        if not state & Gdk.ModifierType.CONTROL_MASK:
+            return False
+
+        keyval = Gdk.keyval_to_lower(keyval)
+        text_buffer = textview.get_buffer()
+        clipboard = textview.get_clipboard()
+        if keyval == Gdk.KEY_c:
+            text_buffer.copy_clipboard(clipboard)
+            return True
+        if keyval == Gdk.KEY_v:
+            text_buffer.paste_clipboard(
+                clipboard,
+                None,
+                textview.get_editable(),
+            )
             return True
         return False
 

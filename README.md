@@ -15,6 +15,8 @@ as soon as they happen.
   atomically.
 - **Escape:** hides the note.
 - **Multiline notes:** `Shift+Enter` inserts a line break; `Enter` creates the note.
+- **Clipboard shortcuts:** `Ctrl+C` copies selected text and `Ctrl+V` pastes in
+  both the new-note field and the inline editor.
 - **Visual feedback:** smooth entry and a quick sparkle burst from the checkbox
   when completing a task.
 
@@ -23,8 +25,8 @@ as soon as they happen.
 ### Arch Linux / Omarchy package
 
 ```bash
-curl -LO https://github.com/Christopher-Moreira/omarchy-stickynote/releases/download/v1.0.5/omarchy-stickynote-1.0.5-1-any.pkg.tar.zst
-sudo pacman -U omarchy-stickynote-1.0.5-1-any.pkg.tar.zst
+curl -LO https://github.com/Christopher-Moreira/omarchy-stickynote/releases/download/v1.0.6/omarchy-stickynote-1.0.6-1-any.pkg.tar.zst
+sudo pacman -U omarchy-stickynote-1.0.6-1-any.pkg.tar.zst
 ```
 
 After installation, press `SUPER + SPACE` and search for **Sticky Notes**. The
@@ -37,7 +39,7 @@ the regular `yay -S omarchy-stickynote` flow when registrations reopen.
 
 ### Manual release
 
-Download `omarchy-stickynote-1.0.5.tar.gz` from the releases page, extract it,
+Download `omarchy-stickynote-1.0.6.tar.gz` from the releases page, extract it,
 and run:
 
 ```bash
@@ -123,6 +125,8 @@ Restart Waybar with `omarchy restart waybar`.
 - `SUPER + CTRL + S`, or click the Waybar icon—show or hide the note.
 - Type and press `Enter`—add an item.
 - Press `Shift + Enter`—insert a line break without creating another item.
+- Press `Ctrl + C`—copy selected text from a text field or inline editor.
+- Press `Ctrl + V`—paste clipboard text into a text field or inline editor.
 - Click a checkbox—complete and remove the item.
 - Click the pencil icon—edit an item; click the confirmation icon or press
   `Ctrl + Enter` to save, or press `Escape` to cancel.
@@ -144,7 +148,7 @@ omarchy-stickynote --hide
 
 ```bash
 make test
-make dist VERSION=1.0.5
+make dist VERSION=1.0.6
 ```
 
 `packaging/aur/PKGBUILD` contains the Arch/AUR package recipe. Releases use
